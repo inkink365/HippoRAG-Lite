@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "HippoRAG-Lite"
+version = "0.0.1"
+description = "去除了HippoRAG2中的torch，vllm，甚至openai；完全由siliconflow api和本地cpu实现功能。"
+authors = ["inkink365 <inkink365@outlook.com>"]
+readme = "README.md"
+packages = [{include = "hipporag_lite"}]
+repository = "https://github.com/inkink365/HippoRAG-Lite"
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<4.0"
+pydantic = "2.10.4"
+tenacity = "8.5.0"
+python_igraph = "0.11.8"
+filelock = "3.16.1"
+pandas = "2.3.1"
+pyarrow = "21.0.0"
+numpy = "1.26.4"
+requests = ">=2.28.0"
+tqdm = "*" 
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
