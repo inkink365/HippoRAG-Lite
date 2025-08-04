@@ -107,5 +107,108 @@ except Exception as e:
     print(f"Error during evaluation: {e}")
 
 ```
+```python
+# windows 例程
+
+import os
+os.environ["OPENAI_API_KEY"] = "你的硅基api_key"
+
+import multiprocessing
+
+if __name__ == '__main__':
+    multiprocessing.freeze_support()
+
+    from hipporag_lite import HippoRAG
+
+    # Prepare datasets and evaluation
+    docs = [
+        "Oliver Badman is a politician.",
+        "George Rankin is a politician.",
+        "Thomas Marwick is a politician.",
+        "Cinderella attended the royal ball.",
+        "The prince used the lost glass slipper to search the kingdom.",
+        "When the slipper fit perfectly, Cinderella was reunited with the prince.",
+        "Erik Hort's birthplace is Montebello.",
+        "Marina is bom in Minsk.",
+        "Montebello is a part of Rockland County."
+    ]
+
+    save_dir = 'outputs'
+    llm_model_name = 'Pro/deepseek-ai/DeepSeek-V3' # 使用硅基流动的llm与embedding模型
+    embedding_model_name = 'Qwen/Qwen3-Embedding-8B'
+    llm_base_url = 'https://api.siliconflow.cn/v1/chat/completions'
+    embedding_base_url = 'https://api.siliconflow.cn/v1/embeddings'
+
+    # Startup a HippoRAG instance
+    try:
+        hipporag = HippoRAG(save_dir=save_dir, 
+                            llm_model_name=llm_model_name,
+                            embedding_model_name=embedding_model_name,
+                            llm_base_url=llm_base_url,
+                            embedding_base_url=embedding_base_url)
+        print("HippoRAG instance created successfully.")
+    except Exception as e:
+        print(f"Error creating HippoRAG instance: {e}")
+
+    # Run indexing
+    try:
+        hipporag.index(docs=docs)
+        print("Indexing completed successfully.")
+    except Exception as e:
+        print(f"Error during indexing: {e}")
+
+    # Separate Retrieval & QA
+    queries = [
+        "What is George Rankin's occupation?",
+        "How did Cinderella reach her happy ending?",
+        "What county is Erik Hort's birthplace a part of?"
+    ]
+
+    try:
+        retrieval_results = hipporag.retrieve(queries=queries, num_to_retrieve=2)
+        print("Retrieval completed successfully.")
+    except Exception as e:
+        print(f"Error during retrieval: {e}")
+
+    try:
+        qa_results = hipporag.rag_qa(retrieval_results)
+        print("QA completed successfully.")
+    except Exception as e:
+        print(f"Error during QA: {e}")
+
+    # Combined Retrieval & QA
+    try:
+        rag_results = hipporag.rag_qa(queries=queries)
+        print("Combined Retrieval & QA completed successfully.")
+    except Exception as e:
+        print(f"Error during combined Retrieval & QA: {e}")
+
+    # For Evaluation
+    answers = [
+        ["Politician"],
+        ["By going to the ball."],
+        ["Rockland County"]
+    ]
+
+    gold_docs = [
+        ["George Rankin is a politician."],
+        ["Cinderella attended the royal ball.",
+        "The prince used the lost glass slipper to search the kingdom.",
+        "When the slipper fit perfectly, Cinderella was reunited with the prince."],
+        ["Erik Hort's birthplace is Montebello.",
+        "Montebello is a part of Rockland County."]
+    ]
+
+    try:
+        rag_results = hipporag.rag_qa(queries=queries, 
+                                    gold_docs=gold_docs,
+                                    gold_answers=answers)
+        print(rag_results[3])
+        print(rag_results[4])
+        print("Evaluation completed successfully.")
+    except Exception as e:
+        print(f"Error during evaluation: {e}")
+
+```
 
 原项目主页：https://github.com/OSU-NLP-Group/HippoRAG
