@@ -15,6 +15,10 @@ logger = get_logger(__name__)
 class BaseConfig:
     """One and only configuration."""
     # LLM specific attributes 
+    api_key: str = field(
+        default="",
+        metadata={"help": "You siliconflow api_key."}
+    )
     llm_name: str = field(
         default="Pro/deepseek-ai/DeepSeek-V3",
         metadata={"help": "Class name indicating which LLM model to use."}

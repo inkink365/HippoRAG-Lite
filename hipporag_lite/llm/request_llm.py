@@ -96,7 +96,7 @@ def dynamic_retry_decorator(func):
     def wrapper(self, *args, **kwargs):
         dynamic_retry = retry(
             stop=stop_after_attempt(self.max_retries),
-            wait=wait_fixed(2.718)  # 重试间隔1秒，可按需调整
+            wait=wait_fixed(2.718)  # 重试间隔e秒，可按需调整
         )
         decorated_func = dynamic_retry(func)
         return decorated_func(self, *args, **kwargs)
@@ -118,7 +118,7 @@ class SiliconFlowLLM(BaseLLM):
         # 硅基流动API核心配置
         self.llm_name = global_config.llm_name  # 模型名（如硅基流动的模型ID）
         self.api_url = global_config.llm_base_url  # 硅基流动API端点
-        self.api_key = os.getenv("OPENAI_API_KEY")  # 硅基流动API密钥
+        self.api_key = global_config.api_key # 硅基流动API密钥
 
         # 初始化缓存目录和文件
         os.makedirs(self.cache_dir, exist_ok=True)
@@ -161,7 +161,7 @@ class SiliconFlowLLM(BaseLLM):
         # 构造HTTP请求头（含认证）
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.api_key}"
+            "Authorization": f"{self.api_key}"
         }
 
         # logger.debug(f"Sending request to Silicon Flow API: {self.api_url}, params: {params}")

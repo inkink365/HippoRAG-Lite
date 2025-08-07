@@ -26,14 +26,14 @@ class Qwen3EmbeddingModel(BaseEmbeddingModel):
     def _init_siliconflow_client(self) -> None:
         """初始化硅基流动API连接参数"""
         # 从全局配置或环境变量获取API密钥
-        self.api_key = os.getenv("OPENAI_API_KEY")
+        self.api_key = self.global_config.api_key
         if not self.api_key:
             raise ValueError("OPENAI_API_KEY must be set")
         # 硅基流动嵌入API端点
         self.api_url = self.global_config.embedding_base_url
         # 请求头部（固定格式）
         self.headers = {
-            "Authorization": f"Bearer {self.api_key}",
+            "Authorization": self.api_key,
             "Content-Type": "application/json"
         }
         logger.debug("Silicon Flow API client initialized")

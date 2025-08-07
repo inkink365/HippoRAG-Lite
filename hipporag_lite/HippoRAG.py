@@ -37,6 +37,7 @@ class HippoRAG:
 
     def __init__(self,
                  global_config=None,
+                 api_key=None,
                  save_dir=None,
                  llm_model_name=None,
                  llm_base_url=None,
@@ -86,6 +87,9 @@ class HippoRAG:
             self.global_config = global_config
 
         #Overwriting Configuration if Specified
+        if api_key is not None:
+            self.global_config.api_key = api_key
+
         if save_dir is not None:
             self.global_config.save_dir = save_dir
 

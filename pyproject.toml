@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "HippoRAG-Lite"
-version = "0.0.1"
+version = "0.0.2"
 description = "去除了HippoRAG2中的torch，vllm，甚至openai；完全由siliconflow api和本地cpu实现功能。"
 authors = ["inkink365 <inkink365@outlook.com>"]
 readme = "README.md"
