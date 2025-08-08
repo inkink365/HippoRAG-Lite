@@ -1,41 +1,39 @@
-# from `gold_with_3_distractors_context_cot_qa_codex.txt`
-
 one_shot_rag_qa_docs = (
-    """Wikipedia Title: The Last Horse\nThe Last Horse (Spanish:El último caballo) is a 1950 Spanish comedy film directed by Edgar Neville starring Fernando Fernán Gómez.\n"""
-    """Wikipedia Title: Southampton\nThe University of Southampton, which was founded in 1862 and received its Royal Charter as a university in 1952, has over 22,000 students. The university is ranked in the top 100 research universities in the world in the Academic Ranking of World Universities 2010. In 2010, the THES - QS World University Rankings positioned the University of Southampton in the top 80 universities in the world. The university considers itself one of the top 5 research universities in the UK. The university has a global reputation for research into engineering sciences, oceanography, chemistry, cancer sciences, sound and vibration research, computer science and electronics, optoelectronics and textile conservation at the Textile Conservation Centre (which is due to close in October 2009.) It is also home to the National Oceanography Centre, Southampton (NOCS), the focus of Natural Environment Research Council-funded marine research.\n"""
-    """Wikipedia Title: Stanton Township, Champaign County, Illinois\nStanton Township is a township in Champaign County, Illinois, USA. As of the 2010 census, its population was 505 and it contained 202 housing units.\n"""
-    """Wikipedia Title: Neville A. Stanton\nNeville A. Stanton is a British Professor of Human Factors and Ergonomics at the University of Southampton. Prof Stanton is a Chartered Engineer (C.Eng), Chartered Psychologist (C.Psychol) and Chartered Ergonomist (C.ErgHF). He has written and edited over a forty books and over three hundered peer-reviewed journal papers on applications of the subject. Stanton is a Fellow of the British Psychological Society, a Fellow of The Institute of Ergonomics and Human Factors and a member of the Institution of Engineering and Technology. He has been published in academic journals including "Nature". He has also helped organisations design new human-machine interfaces, such as the Adaptive Cruise Control system for Jaguar Cars.\n"""
-    """Wikipedia Title: Finding Nemo\nFinding Nemo Theatrical release poster Directed by Andrew Stanton Produced by Graham Walters Screenplay by Andrew Stanton Bob Peterson David Reynolds Story by Andrew Stanton Starring Albert Brooks Ellen DeGeneres Alexander Gould Willem Dafoe Music by Thomas Newman Cinematography Sharon Calahan Jeremy Lasky Edited by David Ian Salter Production company Walt Disney Pictures Pixar Animation Studios Distributed by Buena Vista Pictures Distribution Release date May 30, 2003 (2003 - 05 - 30) Running time 100 minutes Country United States Language English Budget $$94 million Box office $$940.3 million"""
+    """维基百科标题：The Last Horse\n《最后的马》（西班牙语：El último caballo）是1950年的西班牙喜剧电影，由埃德加·内维尔执导，费尔南多·费尔南·戈麦斯主演。\n"""
+    """维基百科标题：Southampton\n南安普顿大学成立于1862年，1952年获得皇家宪章成为大学，现有超过22,000名学生。在2010年世界大学学术排名中，该校位列全球前100名研究型大学。2010年，泰晤士高等教育-QS世界大学排名将南安普顿大学列为全球前80名。该校自认为是英国前5名的研究型大学。南安普顿大学在工程科学、海洋学、化学、癌症科学、声振研究、计算机科学与电子、光电子学以及纺织品保护中心（将于2009年10月关闭）的纺织品保护领域享有全球声誉。它也是南安普顿国家海洋学中心（NOCS）的所在地，该中心是自然环境研究委员会资助的海洋研究核心。\n"""
+    """维基百科标题：Stanton Township, Champaign County, Illinois\n斯坦顿镇是美国伊利诺伊州尚佩恩县的一个镇。根据2010年人口普查，其人口为505人，包含202个住房单元。\n"""
+    """维基百科标题：Neville A. Stanton\n内维尔·A·斯坦顿是南安普顿大学的英国人为因素与工效学教授。斯坦顿教授是特许工程师（C.Eng）、特许心理学家（C.Psychol）和特许工效学家（C.ErgHF）。他撰写和编辑了超过40本书籍和300多篇同行评审期刊论文，探讨该学科的应用。斯坦顿是英国心理学会会员、工效学与人为因素学会会员以及工程技术学会会员。他的论文发表在包括《自然》在内的学术期刊上。他还帮助多家机构设计新的人机界面，如捷豹汽车的自适应巡航控制系统。\n"""
+    """维基百科标题：Finding Nemo\n《海底总动员》影院版海报 导演：安德鲁·斯坦顿 制片人：格雷厄姆·沃尔特斯 编剧：安德鲁·斯坦顿、鲍勃·彼得森、大卫·雷诺兹 故事：安德鲁·斯坦顿 主演：艾伯特·布鲁克斯、艾伦·德詹尼丝、亚历山大·古尔德、威廉·达福 配乐：托马斯·纽曼 摄影：莎伦·卡拉汉、杰里米·拉斯基 剪辑：大卫·伊恩·索尔特 制作公司：华特迪士尼影片公司、皮克斯动画工作室 发行公司：博伟影业发行 上映日期：2003年5月30日 片长：100分钟 国家：美国 语言：英语 预算：9400万美元 票房：9.403亿美元"""
 )
 
 
 
 one_shot_ircot_demo = (
     f'{one_shot_rag_qa_docs}'
-    '\n\nQuestion: '
-    f"When was Neville A. Stanton's employer founded?"
-    '\nThought: '
-    f"The employer of Neville A. Stanton is University of Southampton. The University of Southampton was founded in 1862. So the answer is: 1862."
+    '\n\n问题：'
+    f"内维尔·A·斯坦顿的雇主成立于哪一年？"
+    '\n思考：'
+    f"内维尔·A·斯坦顿的雇主是南安普顿大学。南安普顿大学成立于1862年。因此答案是：1862年。"
     '\n\n'
 )
 
 
 rag_qa_system = (
-    'As an advanced reading comprehension assistant, your task is to analyze text passages and corresponding questions meticulously. '
-    'Your response start after "Thought: ", where you will methodically break down the reasoning process, illustrating how you arrive at conclusions. '
-    'Conclude with "Answer: " to present a concise, definitive response, devoid of additional elaborations.'
+    '作为高级阅读理解助手，你的任务是仔细分析文本段落和相应问题。'
+    '你的回应从“思考：”开始，在此处你需要有条理地分解推理过程，说明你如何得出结论。'
+    '最后以“答案：”结尾，呈现简洁、明确的回应，无需额外阐述。'
 )
 
 one_shot_rag_qa_input = (
     f"{one_shot_rag_qa_docs}"
-    "\n\nQuestion: "
-    "When was Neville A. Stanton's employer founded?"
-    '\nThought: '
+    "\n\n问题："
+    "内维尔·A·斯坦顿的雇主成立于哪一年？"
+    '\n思考：'
 )
 
 one_shot_rag_qa_output = (
-    "The employer of Neville A. Stanton is University of Southampton. The University of Southampton was founded in 1862. "
-    "\nAnswer: 1862."
+    "内维尔·A·斯坦顿的雇主是南安普顿大学。南安普顿大学成立于1862年。"
+    "\n答案：1862年。"
 )
 
 

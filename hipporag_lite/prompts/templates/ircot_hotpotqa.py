@@ -1,23 +1,24 @@
 one_shot_ircot_demo_docs = (
-    """Wikipedia Title: Milk and Honey (album)\nMilk and Honey is an album by John Lennon and Yoko Ono released in 1984. Following the compilation "The John Lennon Collection", it is Lennon's eighth and final studio album, and the first posthumous release of new Lennon music, having been recorded in the last months of his life during and following the sessions for their 1980 album "Double Fantasy". It was assembled by Yoko Ono in association with the Geffen label.\n\n"""
-    """Wikipedia Title: John Lennon Museum\nJohn Lennon Museum (ジョン・レノン・ミュージアム , Jon Renon Myūjiamu ) was a museum located inside the Saitama Super Arena in Chūō-ku, Saitama, Saitama Prefecture, Japan. It was established to preserve knowledge of John Lennon's life and musical career. It displayed Lennon's widow Yoko Ono's collection of his memorabilia as well as other displays. The museum opened on October 9, 2000, the 60th anniversary of Lennon’s birth, and closed on September 30, 2010, when its exhibit contract with Yoko Ono expired. A tour of the museum began with a welcoming message and short film narrated by Yoko Ono (in Japanese with English headphones available), and ended at an avant-garde styled "reflection room" full of chairs facing a slide show of moving words and images. After this room there was a gift shop with John Lennon memorabilia available.\n\n"""
-    """Wikipedia Title: Walls and Bridges\nWalls and Bridges is the fifth studio album by English musician John Lennon. It was issued by Apple Records on 26 September 1974 in the United States and on 4 October in the United Kingdom. Written, recorded and released during his 18-month separation from Yoko Ono, the album captured Lennon in the midst of his "Lost Weekend". "Walls and Bridges" was an American "Billboard" number-one album and featured two hit singles, "Whatever Gets You thru the Night" and "#9 Dream". The first of these was Lennon's first number-one hit in the United States as a solo artist, and his only chart-topping single in either the US or Britain during his lifetime.\n\n"""
-    """Wikipedia Title: Nobody Loves You (When You're Down and Out)\n"Nobody Loves You (When You're Down and Out)" is a song written by John Lennon released on his 1974 album "Walls and Bridges". The song is included on the 1986 compilation "Menlove Ave.", the 1990 boxset "Lennon", the 1998 boxset "John Lennon Anthology", the 2005 two-disc compilation "", and the 2010 boxset "Gimme Some Truth".\n\n"""
-    """Wikipedia Title: Give Peace a Chance\n"Give Peace a Chance" is an anti-war song written by John Lennon (credited to Lennon–McCartney), and performed with Yoko Ono in Montreal, Quebec, Canada. Released as a single in 1969 by the Plastic Ono Band on Apple Records (catalogue Apple 13 in the United Kingdom, Apple 1809 in the United States), it is the first solo single issued by Lennon, released when he was still a member of the Beatles, and became an anthem of the American anti-war movement during the 1970s. It peaked at number 14 on the "Billboard" Hot 100 and number 2 on the British singles chart.\n"""
+    """维基百科标题：Milk and Honey (album)\n《牛奶与蜂蜜》是约翰·列侬和小野洋子1984年发行的专辑。继精选集《约翰·列侬合集》之后，这是列侬的第八张也是最后一张录音室专辑，也是他的新音乐首次在死后发行，录制于他生命的最后几个月，包括1980年专辑《双重幻想》的录制期间及之后。该专辑由小野洋子与格芬唱片公司合作整理。\n\n"""
+    """维基百科标题：John Lennon Museum\n约翰·列侬博物馆（日语：ジョン・レノン・ミュージアム）位于日本埼玉县埼玉市中央区的埼玉超级竞技场内部。该博物馆旨在保存关于约翰·列侬的生平及音乐事业的资料。它展示了列侬的遗孀小野洋子收藏的他的纪念品以及其他展品。博物馆于2000年10月9日（列侬诞辰60周年）开馆，2010年9月30日因与小野洋子的展览合同到期而闭馆。博物馆参观从欢迎辞和小野洋子 narrated的短片开始（日语旁白，提供英语耳机），最后到达一个前卫风格的“反思室”，里面有许多椅子，面向播放动态文字和图像的幻灯片。这个房间之后是一个出售约翰·列侬纪念品的礼品店。\n\n"""
+    """维基百科标题：Walls and Bridges\n《墙与桥》是英国音乐家约翰·列侬的第五张录音室专辑。由苹果唱片公司于1974年9月26日在美国发行，10月4日在英国发行。这张专辑是在他与小野洋子分离18个月期间创作、录制和发行的，捕捉了列侬处于“失落周末”时期的状态。《墙与桥》是美国公告牌排行榜冠军专辑，包含两首热门单曲《Whatever Gets You thru the Night》和《#9 Dream》。其中第一首是列侬作为独唱艺术家在美国的首支冠军单曲，也是他生前在美国或英国唯一的冠军单曲。\n\n"""
+    """维基百科标题：Nobody Loves You (When You're Down and Out)\n《Nobody Loves You (When You're Down and Out)》是约翰·列侬创作的歌曲，收录于他1974年的专辑《墙与桥》中。这首歌还被收录在1986年的精选集《Menlove Ave.》、1990年的盒装专辑《Lennon》、1998年的盒装专辑《John Lennon Anthology》、2005年的双碟精选集《》以及2010年的盒装专辑《Gimme Some Truth》中。\n\n"""
+    """维基百科标题：Give Peace a Chance\n《给和平一个机会》是一首反战歌曲，由约翰·列侬创作（署名列侬-麦卡特尼），与小野洋子在加拿大魁北克省蒙特利尔共同表演。1969年由塑料小野乐队在苹果唱片公司发行单曲（英国 catalog 为Apple 13，美国为Apple 1809），这是列侬发行的首支独唱单曲，当时他仍是披头士乐队成员，成为20世纪70年代美国反战运动的 anthem。它在《公告牌》百强单曲榜上排名第14位，在英国单曲榜上排名第2位。\n"""
 )
+
 
 
 one_shot_ircot_demo = (
     f'{one_shot_ircot_demo_docs}'
-    '\n\nQuestion: '
-    f"Nobody Loves You was written by John Lennon and released on what album that was issued by Apple Records, and was written, recorded, and released during his 18 month separation from Yoko Ono?"
-    '\nThought: '
-    f"The album issued by Apple Records, and written, recorded, and released during John Lennon's 18 month separation from Yoko Ono is Walls and Bridges. Nobody Loves You was written by John Lennon on Walls and Bridges album. So the answer is: Walls and Bridges."
+    '\n\n问题：'
+    f"《Nobody Loves You》由约翰·列侬创作并发行在哪个由苹果唱片公司发行的专辑中？该专辑是在他与小野洋子分离18个月期间创作、录制和发行的？"
+    '\n思考：'
+    f"由苹果唱片公司发行，且在约翰·列侬与小野洋子分离18个月期间创作、录制和发行的专辑是《墙与桥》。《Nobody Loves You》由约翰·列侬创作并收录于《墙与桥》专辑中。因此答案是：《墙与桥》。"
     '\n\n'
 )
 
 ircot_system = (
-    'You serve as an intelligent assistant, adept at facilitating users through complex, multi-hop reasoning across multiple documents. This task is illustrated through demonstrations, each consisting of a document set paired with a relevant question and its multi-hop reasoning thoughts. Your task is to generate one thought for current step, DON\'T generate the whole thoughts at once! If you reach what you believe to be the final step, start with "So the answer is:".'
+    '你是一个智能助手，擅长帮助用户通过跨多个文档的复杂多跳推理解决问题。此任务通过示例说明，每个示例包含一组文档、一个相关问题及其多跳推理过程。你的任务是为当前步骤生成一个思考步骤，不要一次性生成完整推理！如果你认为已到最后一步，请以“因此答案是：”开头。'
     '\n\n'
     f'{one_shot_ircot_demo}'
 )

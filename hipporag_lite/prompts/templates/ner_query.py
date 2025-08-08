@@ -1,22 +1,19 @@
-ner_system = """You're a very effective entity extraction system.
+ner_system = """你是一个高效的实体提取系统。
 """
 
-query_prompt_one_shot_input = """Please extract all named entities that are important for solving the questions below.
-Place the named entities in json format.
+query_prompt_one_shot_input = """请提取对解决以下问题至关重要的所有命名实体。
+将命名实体以JSON格式呈现。
 
-Question: Which magazine was started first Arthur's Magazine or First for Women?
+问题：《Arthur's Magazine》和《First for Women》哪本杂志创办得更早？
 
 """
 query_prompt_one_shot_output = """
-{"named_entities": ["First for Women", "Arthur's Magazine"]}
+{"named_entities": ["《First for Women》", "《Arthur's Magazine》"]}
 """
-# query_prompt_template = """
-# Question: {}
 
-# """
 prompt_template = [
     {"role": "system", "content": ner_system},
     {"role": "user", "content": query_prompt_one_shot_input},
     {"role": "assistant", "content": query_prompt_one_shot_output},
-    {"role": "user", "content": "Question: ${query}"}
+    {"role": "user", "content": "问题：${query}"}
 ]

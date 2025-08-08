@@ -1,18 +1,18 @@
 from .ner import one_shot_ner_paragraph, one_shot_ner_output
 from ...utils.llm_utils import convert_format_to_template
 
-ner_conditioned_re_system = """Your task is to construct an RDF (Resource Description Framework) graph from the given passages and named entity lists. 
-Respond with a JSON list of triples, with each triple representing a relationship in the RDF graph. 
+ner_conditioned_re_system = """你的任务是从给定的段落和命名实体列表中构建RDF（资源描述框架）图。
+请以三元组的JSON列表形式回应，每个三元组代表RDF图中的一个关系。
 
-Pay attention to the following requirements:
-- Each triple should contain at least one, but preferably two, of the named entities in the list for each passage.
-- Clearly resolve pronouns to their specific names to maintain clarity.
+请注意以下要求：
+- 每个三元组应包含每个段落的实体列表中的至少一个实体，最好是两个。
+- 明确解析代词的具体指代对象，以保持清晰性。
 
 """
 
 
-ner_conditioned_re_frame = """Convert the paragraph into a JSON dict, it has a named entity list and a triple list.
-Paragraph:
+ner_conditioned_re_frame = """将段落转换为JSON字典，包含命名实体列表和三元组列表。
+段落：
 ```
 {passage}
 ```
@@ -20,23 +20,22 @@ Paragraph:
 {named_entity_json}
 """
 
-
 ner_conditioned_re_input = ner_conditioned_re_frame.format(passage=one_shot_ner_paragraph, named_entity_json=one_shot_ner_output)
 
 
 ner_conditioned_re_output = """{"triples": [
-            ["Radio City", "located in", "India"],
-            ["Radio City", "is", "private FM radio station"],
-            ["Radio City", "started on", "3 July 2001"],
-            ["Radio City", "plays songs in", "Hindi"],
-            ["Radio City", "plays songs in", "English"],
-            ["Radio City", "forayed into", "New Media"],
-            ["Radio City", "launched", "PlanetRadiocity.com"],
-            ["PlanetRadiocity.com", "launched in", "May 2008"],
-            ["PlanetRadiocity.com", "is", "music portal"],
-            ["PlanetRadiocity.com", "offers", "news"],
-            ["PlanetRadiocity.com", "offers", "videos"],
-            ["PlanetRadiocity.com", "offers", "songs"]
+            ["Radio City", "位于", "印度"],
+            ["Radio City", "是", "私人调频电台"],
+            ["Radio City", "成立于", "2001年7月3日"],
+            ["Radio City", "播放", "印地语歌曲"],
+            ["Radio City", "播放", "英语歌曲"],
+            ["Radio City", "进军", "新媒体领域"],
+            ["Radio City", "推出", "PlanetRadiocity.com"],
+            ["PlanetRadiocity.com", "上线于", "2008年5月"],
+            ["PlanetRadiocity.com", "是", "音乐门户网站"],
+            ["PlanetRadiocity.com", "提供", "新闻"],
+            ["PlanetRadiocity.com", "提供", "视频"],
+            ["PlanetRadiocity.com", "提供", "歌曲"]
     ]
 }
 """
