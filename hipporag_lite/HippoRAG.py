@@ -15,6 +15,7 @@ import numpy as np
 from collections import defaultdict
 import re
 import time
+import asyncio
 
 from .llm import _get_llm_class, BaseLLM
 from .embedding_model import _get_embedding_model_class, BaseEmbeddingModel
@@ -214,93 +215,132 @@ class HippoRAG:
 
         assert False, logger.info('Done with OpenIE, run online indexing for future retrieval.')
 
-    def index(self, docs: List[str]):
+    async def index(self, docs: List[str]):
         """
-        Indexes the given documents based on the HippoRAG 2 framework which generates an OpenIE knowledge graph
-        based on the given documents and encodes passages, entities and facts separately for later retrieval.
+        基于HippoRAG 2框架对给定文档进行索引，该框架会基于给定文档生成OpenIE知识图谱，
+        并分别对段落、实体和事实进行编码，以便后续检索。
 
-        Parameters:
+        参数:
             docs : List[str]
-                A list of documents to be indexed.
+                要索引的文档列表。
         """
+        # 检查文档是否已被索引
+        current_docs = set(self.chunk_embedding_store.get_all_texts())
+        existing_docs = [doc for doc in docs if doc in current_docs]
+        if existing_docs:
+            raise ValueError(f"以下文档已存在于索引中: {existing_docs}")
 
-        logger.info(f"Indexing Documents")
+        logger.info(f"正在索引文档")
 
-        logger.info(f"Performing OpenIE")
+        logger.info(f"执行OpenIE处理")
 
+        # 异步执行耗时操作
         if self.global_config.openie_mode == 'offline':
-            self.pre_openie(docs)
+            await asyncio.to_thread(self.pre_openie, docs)
 
-        self.chunk_embedding_store.insert_strings(docs)
-        chunk_to_rows = self.chunk_embedding_store.get_all_id_to_rows()
+        await asyncio.to_thread(self.chunk_embedding_store.insert_strings, docs)
+        chunk_to_rows = await asyncio.to_thread(self.chunk_embedding_store.get_all_id_to_rows)
 
-        all_openie_info, chunk_keys_to_process = self.load_existing_openie(chunk_to_rows.keys())
-        new_openie_rows = {k : chunk_to_rows[k] for k in chunk_keys_to_process}
+        all_openie_info, chunk_keys_to_process = await asyncio.to_thread(
+            self.load_existing_openie, chunk_to_rows.keys()
+        )
+        new_openie_rows = {k: chunk_to_rows[k] for k in chunk_keys_to_process}
 
         if len(chunk_keys_to_process) > 0:
-            new_ner_results_dict, new_triple_results_dict = self.openie.batch_openie(new_openie_rows)
-            self.merge_openie_results(all_openie_info, new_openie_rows, new_ner_results_dict, new_triple_results_dict)
+            # 处理OpenIE结果（计算密集型操作）
+            new_ner_results_dict, new_triple_results_dict = await asyncio.to_thread(
+                self.openie.batch_openie, new_openie_rows
+            )
+            await asyncio.to_thread(
+                self.merge_openie_results, 
+                all_openie_info, 
+                new_openie_rows, 
+                new_ner_results_dict, 
+                new_triple_results_dict
+            )
 
         if self.global_config.save_openie:
-            self.save_openie_results(all_openie_info)
+            await asyncio.to_thread(self.save_openie_results, all_openie_info)
 
-        ner_results_dict, triple_results_dict = reformat_openie_results(all_openie_info)
+        ner_results_dict, triple_results_dict = await asyncio.to_thread(
+            reformat_openie_results, all_openie_info
+        )
 
-        assert len(chunk_to_rows) == len(ner_results_dict) == len(triple_results_dict)
+        # 验证数据一致性
+        if not (len(chunk_to_rows) == len(ner_results_dict) == len(triple_results_dict)):
+            raise RuntimeError("索引过程中数据不一致：chunk、ner和triple的数量不匹配")
 
-        # prepare data_store
+        # 准备数据存储
         chunk_ids = list(chunk_to_rows.keys())
 
-        chunk_triples = [[text_processing(t) for t in triple_results_dict[chunk_id].triples] for chunk_id in chunk_ids]
-        entity_nodes, chunk_triple_entities = extract_entity_nodes(chunk_triples)
-        facts = flatten_facts(chunk_triples)
+        chunk_triples = [
+            [text_processing(t) for t in triple_results_dict[chunk_id].triples] 
+            for chunk_id in chunk_ids
+        ]
+        entity_nodes, chunk_triple_entities = await asyncio.to_thread(
+            extract_entity_nodes, chunk_triples
+        )
+        facts = await asyncio.to_thread(flatten_facts, chunk_triples)
 
-        logger.info(f"Encoding Entities")
-        self.entity_embedding_store.insert_strings(entity_nodes)
+        logger.info(f"正在编码实体")
+        await asyncio.to_thread(self.entity_embedding_store.insert_strings, entity_nodes)
 
-        logger.info(f"Encoding Facts")
-        self.fact_embedding_store.insert_strings([str(fact) for fact in facts])
+        logger.info(f"正在编码事实")
+        await asyncio.to_thread(
+            self.fact_embedding_store.insert_strings, 
+            [str(fact) for fact in facts]
+        )
 
-        logger.info(f"Constructing Graph")
+        logger.info(f"正在构建图谱")
 
         self.node_to_node_stats = {}
         self.ent_node_to_chunk_ids = {}
 
-        self.add_fact_edges(chunk_ids, chunk_triples)
-        num_new_chunks = self.add_passage_edges(chunk_ids, chunk_triple_entities)
+        await asyncio.to_thread(self.add_fact_edges, chunk_ids, chunk_triples)
+        num_new_chunks = await asyncio.to_thread(
+            self.add_passage_edges, chunk_ids, chunk_triple_entities
+        )
 
         if num_new_chunks > 0:
-            logger.info(f"Found {num_new_chunks} new chunks to save into graph.")
-            self.add_synonymy_edges()
+            logger.info(f"发现 {num_new_chunks} 个新chunk需要保存到图谱中。")
+            await asyncio.to_thread(self.add_synonymy_edges)
+            await asyncio.to_thread(self.augment_graph)
+            await asyncio.to_thread(self.save_igraph)
 
-            self.augment_graph()
-            self.save_igraph()
 
-    def delete(self, docs_to_delete: List[str]):
+    async def delete(self, docs_to_delete: List[str]):
         """
-        Deletes the given documents from all data structures within the HippoRAG class.
-        Note that triples and entities which are indexed from chunks that are not being removed will not be removed.
+        从HippoRAG类中的所有数据结构中删除给定的文档。
+        注意，从未被删除的chunk中索引的三元组和实体将不会被删除。
 
-        Parameters:
-            docs : List[str]
-                A list of documents to be deleted.
+        参数:
+            docs_to_delete : List[str]
+                要删除的文档列表。
         """
-
-        #Making sure that all the necessary structures have been built.
+        # 确保所有必要的结构都已构建
         if not self.ready_to_retrieve:
-            self.prepare_retrieval_objects()
+            await asyncio.to_thread(self.prepare_retrieval_objects)
 
         current_docs = set(self.chunk_embedding_store.get_all_texts())
-        docs_to_delete = [doc for doc in docs_to_delete if doc in current_docs]
+        existing_docs = [doc for doc in docs_to_delete if doc in current_docs]
+        non_existing_docs = [doc for doc in docs_to_delete if doc not in current_docs]
 
-        #Get ids for chunks to delete
+        # 对于不存在的文档，发出警告
+        if non_existing_docs:
+            logger.warning(f"以下文档不存在于索引中，无法删除: {non_existing_docs}")
+        
+        # 如果没有要删除的文档，抛出错误
+        if not existing_docs:
+            raise ValueError("没有找到可删除的文档")
+
+        # 获取要删除的chunk的ID
         chunk_ids_to_delete = set(
-            [self.chunk_embedding_store.text_to_hash_id[chunk] for chunk in docs_to_delete])
+            [self.chunk_embedding_store.text_to_hash_id[chunk] for chunk in existing_docs]
+        )
 
-        #Find triples in chunks to delete
-        all_openie_info, chunk_keys_to_process = self.load_existing_openie([])
+        # 查找要删除的chunk中的三元组
+        all_openie_info, _ = await asyncio.to_thread(self.load_existing_openie, [])
         triples_to_delete = []
-
         all_openie_info_with_deletes = []
 
         for openie_doc in all_openie_info:
@@ -309,139 +349,195 @@ class HippoRAG:
             else:
                 all_openie_info_with_deletes.append(openie_doc)
 
-        triples_to_delete = flatten_facts(triples_to_delete)
+        triples_to_delete = await asyncio.to_thread(flatten_facts, triples_to_delete)
 
-        #Filter out triples that appear in unaltered chunks
+        # 过滤掉在未修改的chunk中出现的三元组
         true_triples_to_delete = []
-
         for triple in triples_to_delete:
             proc_triple = tuple(text_processing(list(triple)))
-
-            doc_ids = self.proc_triples_to_docs[str(proc_triple)]
-
+            doc_ids = self.proc_triples_to_docs.get(str(proc_triple), set())
+            
+            if not doc_ids:
+                continue  # 三元组不存在于任何文档中
+            
             non_deleted_docs = doc_ids.difference(chunk_ids_to_delete)
-
             if len(non_deleted_docs) == 0:
                 true_triples_to_delete.append(triple)
 
-        processed_true_triples_to_delete = [[text_processing(list(triple)) for triple in true_triples_to_delete]]
-        entities_to_delete, _ = extract_entity_nodes(processed_true_triples_to_delete)
-        processed_true_triples_to_delete = flatten_facts(processed_true_triples_to_delete)
+        processed_true_triples_to_delete = [
+            [text_processing(list(triple)) for triple in true_triples_to_delete]
+        ]
+        entities_to_delete, _ = await asyncio.to_thread(
+            extract_entity_nodes, processed_true_triples_to_delete
+        )
+        processed_true_triples_to_delete = await asyncio.to_thread(
+            flatten_facts, processed_true_triples_to_delete
+        )
 
-        triple_ids_to_delete = set([self.fact_embedding_store.text_to_hash_id[str(triple)] for triple in processed_true_triples_to_delete])
+        triple_ids_to_delete = set([
+            self.fact_embedding_store.text_to_hash_id[str(triple)] 
+            for triple in processed_true_triples_to_delete
+        ])
 
-        #Filter out entities that appear in unaltered chunks
-        ent_ids_to_delete = [self.entity_embedding_store.text_to_hash_id[ent] for ent in entities_to_delete]
+        # 过滤掉在未修改的chunk中出现的实体
+        ent_ids_to_delete = [
+            self.entity_embedding_store.text_to_hash_id[ent] 
+            for ent in entities_to_delete 
+            if ent in self.entity_embedding_store.text_to_hash_id
+        ]
 
         filtered_ent_ids_to_delete = []
-
         for ent_node in ent_ids_to_delete:
-            doc_ids = self.ent_node_to_chunk_ids[ent_node]
-
+            doc_ids = self.ent_node_to_chunk_ids.get(ent_node, set())
             non_deleted_docs = doc_ids.difference(chunk_ids_to_delete)
-
             if len(non_deleted_docs) == 0:
                 filtered_ent_ids_to_delete.append(ent_node)
 
-        logger.info(f"Deleting {len(chunk_ids_to_delete)} Chunks")
-        logger.info(f"Deleting {len(triple_ids_to_delete)} Triples")
-        logger.info(f"Deleting {len(filtered_ent_ids_to_delete)} Entities")
+        logger.info(f"正在删除 {len(chunk_ids_to_delete)} 个Chunk")
+        logger.info(f"正在删除 {len(triple_ids_to_delete)} 个三元组")
+        logger.info(f"正在删除 {len(filtered_ent_ids_to_delete)} 个实体")
 
-        self.save_openie_results(all_openie_info_with_deletes)
+        await asyncio.to_thread(self.save_openie_results, all_openie_info_with_deletes)
 
-        self.entity_embedding_store.delete(filtered_ent_ids_to_delete)
-        self.fact_embedding_store.delete(triple_ids_to_delete)
-        self.chunk_embedding_store.delete(chunk_ids_to_delete)
+        # 执行删除操作
+        await asyncio.to_thread(self.entity_embedding_store.delete, filtered_ent_ids_to_delete)
+        await asyncio.to_thread(self.fact_embedding_store.delete, triple_ids_to_delete)
+        await asyncio.to_thread(self.chunk_embedding_store.delete, chunk_ids_to_delete)
 
-        #Delete Nodes from Graph
-        self.graph.delete_vertices(list(filtered_ent_ids_to_delete) + list(chunk_ids_to_delete))
-        self.save_igraph()
+        # 从图中删除节点
+        vertices_to_delete = list(filtered_ent_ids_to_delete) + list(chunk_ids_to_delete)
+        await asyncio.to_thread(self.graph.delete_vertices, vertices_to_delete)
+        await asyncio.to_thread(self.save_igraph)
 
         self.ready_to_retrieve = False
 
-    def retrieve(self,
-                 queries: List[str],
-                 num_to_retrieve: int = None,
-                 gold_docs: List[List[str]] = None) -> List[QuerySolution] | Tuple[List[QuerySolution], Dict]:
-        """
-        Performs retrieval using the HippoRAG 2 framework, which consists of several steps:
-        - Fact Retrieval
-        - Recognition Memory for improved fact selection
-        - Dense passage scoring
-        - Personalized PageRank based re-ranking
 
-        Parameters:
+    async def retrieve(self,
+                    queries: List[str],
+                    num_to_retrieve: int = None,
+                    gold_docs: Optional[List[List[str]]] = None) -> List[QuerySolution] | Tuple[List[QuerySolution], Dict]:
+        """
+        使用HippoRAG 2框架执行检索，包括以下几个步骤：
+        - 事实检索
+        - 用于改进事实选择的识别记忆
+        - 密集段落评分
+        - 基于个性化PageRank的重排序
+
+        参数:
             queries: List[str]
-                A list of query strings for which documents are to be retrieved.
-            num_to_retrieve: int, optional
-                The maximum number of documents to retrieve for each query. If not specified, defaults to
-                the `retrieval_top_k` value defined in the global configuration.
-            gold_docs: List[List[str]], optional
-                A list of lists containing gold-standard documents corresponding to each query. Required
-                if retrieval performance evaluation is enabled (`do_eval_retrieval` in global configuration).
+                要检索文档的查询字符串列表。
+            num_to_retrieve: int, 可选
+                每个查询要检索的最大文档数。如果未指定，默认为
+                全局配置中定义的`retrieval_top_k`值。
+            gold_docs: List[List[str]], 可选
+                包含每个查询对应的黄金标准文档的列表的列表。
+                如果启用了检索性能评估（全局配置中的`do_eval_retrieval`），则需要此参数。
 
-        Returns:
-            List[QuerySolution] or (List[QuerySolution], Dict)
-                If retrieval performance evaluation is not enabled, returns a list of QuerySolution objects, each containing
-                the retrieved documents and their scores for the corresponding query. If evaluation is enabled, also returns
-                a dictionary containing the evaluation metrics computed over the retrieved results.
+        返回:
+            List[QuerySolution] 或 (List[QuerySolution], Dict)
+                如果未启用检索性能评估，则返回QuerySolution对象的列表，每个对象包含
+                对应查询的检索文档及其分数。如果启用了评估，还会返回
+                包含在检索结果上计算的评估指标的字典。
 
-        Notes
+        注意
         -----
-        - Long queries with no relevant facts after reranking will default to results from dense passage retrieval.
+        - 重新排序后没有相关事实的长查询将默认使用密集段落检索的结果。
         """
-        retrieve_start_time = time.time()  # Record start time
+        retrieve_start_time = time.time()  # 记录开始时间
 
         if num_to_retrieve is None:
             num_to_retrieve = self.global_config.retrieval_top_k
+        
+        # 验证输入
+        if not queries:
+            raise ValueError("查询列表不能为空")
+        
+        if num_to_retrieve <= 0:
+            raise ValueError(f"检索数量必须为正数，当前值: {num_to_retrieve}")
 
+        retrieval_recall_evaluator = None
         if gold_docs is not None:
+            if len(queries) != len(gold_docs):
+                raise ValueError(f"查询数量与黄金文档数量不匹配: {len(queries)} vs {len(gold_docs)}")
             retrieval_recall_evaluator = RetrievalRecall(global_config=self.global_config)
 
         if not self.ready_to_retrieve:
-            self.prepare_retrieval_objects()
+            await asyncio.to_thread(self.prepare_retrieval_objects)
 
-        self.get_query_embeddings(queries)
+        await asyncio.to_thread(self.get_query_embeddings, queries)
 
         retrieval_results = []
 
-        for q_idx, query in tqdm(enumerate(queries), desc="Retrieving", total=len(queries)):
+        for q_idx, query in tqdm(enumerate(queries), desc="正在检索", total=len(queries)):
+            if not query.strip():
+                raise ValueError(f"查询 {q_idx} 为空或仅包含空白字符")
+                
             rerank_start = time.time()
-            query_fact_scores = self.get_fact_scores(query)
-            top_k_fact_indices, top_k_facts, rerank_log = self.rerank_facts(query, query_fact_scores)
+            query_fact_scores = await asyncio.to_thread(self.get_fact_scores, query)
+            top_k_fact_indices, top_k_facts, rerank_log = await asyncio.to_thread(
+                self.rerank_facts, query, query_fact_scores
+            )
             rerank_end = time.time()
 
             self.rerank_time += rerank_end - rerank_start
 
             if len(top_k_facts) == 0:
-                logger.info('No facts found after reranking, return DPR results')
-                sorted_doc_ids, sorted_doc_scores = self.dense_passage_retrieval(query)
+                logger.info('重新排序后未找到事实，返回DPR结果')
+                sorted_doc_ids, sorted_doc_scores = await asyncio.to_thread(
+                    self.dense_passage_retrieval, query
+                )
             else:
-                sorted_doc_ids, sorted_doc_scores = self.graph_search_with_fact_entities(query=query,
-                                                                                         link_top_k=self.global_config.linking_top_k,
-                                                                                         query_fact_scores=query_fact_scores,
-                                                                                         top_k_facts=top_k_facts,
-                                                                                         top_k_fact_indices=top_k_fact_indices,
-                                                                                         passage_node_weight=self.global_config.passage_node_weight)
+                sorted_doc_ids, sorted_doc_scores = await asyncio.to_thread(
+                    self.graph_search_with_fact_entities,
+                    query=query,
+                    link_top_k=self.global_config.linking_top_k,
+                    query_fact_scores=query_fact_scores,
+                    top_k_facts=top_k_facts,
+                    top_k_fact_indices=top_k_fact_indices,
+                    passage_node_weight=self.global_config.passage_node_weight
+                )
 
-            top_k_docs = [self.chunk_embedding_store.get_row(self.passage_node_keys[idx])["content"] for idx in sorted_doc_ids[:num_to_retrieve]]
+            # 验证检索结果
+            if sorted_doc_ids.size == 0:
+                logger.warning(f"查询 '{query}' 未检索到任何文档")
+            
+            try:
+                sorted_doc_ids_list = sorted_doc_ids.tolist()
+                
+                top_k_docs = [
+                    self.chunk_embedding_store.get_row(self.passage_node_keys[idx])["content"] 
+                    for idx in sorted_doc_ids_list[:num_to_retrieve]
+                ]
+            except Exception as e:
+                raise RuntimeError(f"获取检索文档时出错: {str(e)}") from e
 
-            retrieval_results.append(QuerySolution(question=query, docs=top_k_docs, doc_scores=sorted_doc_scores[:num_to_retrieve]))
+            retrieval_results.append(
+                QuerySolution(
+                    question=query, 
+                    docs=top_k_docs, 
+                    doc_scores=sorted_doc_scores[:num_to_retrieve]
+                )
+            )
 
-        retrieve_end_time = time.time()  # Record end time
+        retrieve_end_time = time.time()  # 记录结束时间
 
         self.all_retrieval_time += retrieve_end_time - retrieve_start_time
 
-        logger.info(f"Total Retrieval Time {self.all_retrieval_time:.2f}s")
-        logger.info(f"Total Recognition Memory Time {self.rerank_time:.2f}s")
-        logger.info(f"Total PPR Time {self.ppr_time:.2f}s")
-        logger.info(f"Total Misc Time {self.all_retrieval_time - (self.rerank_time + self.ppr_time):.2f}s")
+        logger.info(f"总检索时间 {self.all_retrieval_time:.2f}秒")
+        logger.info(f"总识别记忆时间 {self.rerank_time:.2f}秒")
+        logger.info(f"总PPR时间 {self.ppr_time:.2f}秒")
+        logger.info(f"总其他时间 {self.all_retrieval_time - (self.rerank_time + self.ppr_time):.2f}秒")
 
-        # Evaluate retrieval
-        if gold_docs is not None:
+        # 评估检索结果
+        if gold_docs is not None and retrieval_recall_evaluator is not None:
             k_list = [1, 2, 5, 10, 20, 30, 50, 100, 150, 200]
-            overall_retrieval_result, example_retrieval_results = retrieval_recall_evaluator.calculate_metric_scores(gold_docs=gold_docs, retrieved_docs=[retrieval_result.docs for retrieval_result in retrieval_results], k_list=k_list)
-            logger.info(f"Evaluation results for retrieval: {overall_retrieval_result}")
+            overall_retrieval_result, example_retrieval_results = await asyncio.to_thread(
+                retrieval_recall_evaluator.calculate_metric_scores,
+                gold_docs=gold_docs,
+                retrieved_docs=[retrieval_result.docs for retrieval_result in retrieval_results],
+                k_list=k_list
+            )
+            logger.info(f"检索评估结果: {overall_retrieval_result}")
 
             return retrieval_results, overall_retrieval_result
         else:
@@ -1608,3 +1704,109 @@ class HippoRAG:
         sorted_doc_scores = doc_scores[sorted_doc_ids.tolist()]
 
         return sorted_doc_ids, sorted_doc_scores
+    
+    async def save(self):
+        """
+        保存RAG状态（包括图结构和嵌入存储）
+        
+        异常:
+            RuntimeError: 如果图保存失败或嵌入存储保存失败
+        """
+        try:
+            # 保存图结构
+            if self.graph is not None:
+                await asyncio.to_thread(self.graph.write_pickle, self._graph_pickle_filename)
+                logger.info(f"图结构已保存至: {self._graph_pickle_filename}")
+            else:
+                raise RuntimeError("无法保存空图结构")
+            
+            # 并行保存所有嵌入存储
+            save_tasks = [
+                asyncio.create_task(asyncio.to_thread(self.chunk_embedding_store._save_data)),
+                asyncio.create_task(asyncio.to_thread(self.entity_embedding_store._save_data)),
+                asyncio.create_task(asyncio.to_thread(self.fact_embedding_store._save_data))
+            ]
+            
+            await asyncio.gather(*save_tasks)
+            logger.info("所有嵌入存储已成功保存")
+            
+        except Exception as e:
+            logger.error(f"保存操作失败: {str(e)}")
+            raise RuntimeError(f"系统保存失败: {str(e)}") from e
+
+    async def clear(self):
+        """
+        清空RAG所有数据（文档块、实体、事实和图结构）
+        
+        异常:
+            RuntimeError: 如果清除操作失败
+        """
+        try:
+            logger.warning("开始清空所有RAG数据")
+            
+            # 获取所有存储ID
+            chunk_ids = list(self.chunk_embedding_store.hash_id_to_row.keys())
+            entity_ids = list(self.entity_embedding_store.hash_id_to_row.keys())
+            fact_ids = list(self.fact_embedding_store.hash_id_to_row.keys())
+            
+            if not any([chunk_ids, entity_ids, fact_ids]):
+                logger.info("系统已为空，无需清空")
+                return
+            
+            # 并行删除所有存储
+            delete_tasks = [
+                asyncio.create_task(asyncio.to_thread(self.chunk_embedding_store.delete, chunk_ids)),
+                asyncio.create_task(asyncio.to_thread(self.entity_embedding_store.delete, entity_ids)),
+                asyncio.create_task(asyncio.to_thread(self.fact_embedding_store.delete, fact_ids))
+            ]
+            
+            await asyncio.gather(*delete_tasks)
+            logger.info(f"已删除: {len(chunk_ids)} chunks, {len(entity_ids)} entities, {len(fact_ids)} facts")
+            
+            # 重置图谱
+            self.graph = ig.Graph(directed=self.global_config.is_directed_graph)
+            if self.graph.vcount() > 0:
+                raise RuntimeError("图重置后仍包含节点")
+            
+            # 重新加载存储确保状态一致
+            reload_tasks = [
+                asyncio.create_task(asyncio.to_thread(self.chunk_embedding_store._load_data)),
+                asyncio.create_task(asyncio.to_thread(self.entity_embedding_store._load_data)),
+                asyncio.create_task(asyncio.to_thread(self.fact_embedding_store._load_data))
+            ]
+            
+            await asyncio.gather(*reload_tasks)
+            
+            # 验证清空结果
+            if (len(self.chunk_embedding_store.hash_id_to_idx) > 0 or
+                len(self.entity_embedding_store.hash_id_to_idx) > 0 or
+                len(self.fact_embedding_store.hash_id_to_idx) > 0):
+                raise RuntimeError("存储清空后仍包含数据")
+            
+            logger.info("系统已完全清空")
+            
+        except Exception as e:
+            logger.error(f"清空操作失败: {str(e)}")
+            raise RuntimeError(f"系统清空失败: {str(e)}") from e
+        
+    def size(self) -> int:
+        """
+        返回当前RAG索引的文档数量
+        
+        返回:
+            int: 索引中的文档数量
+            
+        异常:
+            RuntimeError: 如果无法获取索引大小
+        """
+        try:
+            if not hasattr(self.chunk_embedding_store, "text_to_hash_id"):
+                logger.warning("索引为空")
+                return 0
+            
+            size = len(self.chunk_embedding_store.text_to_hash_id)
+            logger.debug(f"当前索引大小: {size} 个文档")
+            return size
+        except Exception as e:
+            logger.error(f"获取索引大小失败: {str(e)}")
+            raise RuntimeError("无法确定索引大小") from e
