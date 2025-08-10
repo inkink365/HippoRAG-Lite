@@ -1742,7 +1742,7 @@ class HippoRAG:
             RuntimeError: 如果清除操作失败
         """
         try:
-            logger.warning("开始清空所有RAG数据")
+            # logger.warning("开始清空所有RAG数据")
             
             # 获取所有存储ID
             chunk_ids = list(self.chunk_embedding_store.hash_id_to_row.keys())
