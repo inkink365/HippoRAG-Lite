@@ -163,6 +163,11 @@ class HippoRAG:
 
         self.ent_node_to_chunk_ids = None
 
+    def __iter__(self):
+        """迭代器（逐个返回chunk_embedding_store.text_to_hash_id的键值对）"""
+        for text, hash_id in self.chunk_embedding_store.text_to_hash_id.items():
+            yield (text, hash_id)
+
 
     def initialize_graph(self):
         """

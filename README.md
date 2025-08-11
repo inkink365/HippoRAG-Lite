@@ -4,7 +4,7 @@
 
 * v0.0.2更新，出于模块化考虑，我们去除了对环境变量的依赖，而是直接作为参数显式传入即可
 * v0.0.3更新，汉化了提示词
-* v0.1.0更新，异步化三大常用函数（index，delete，retrieve），新增三大数据结构常用函数（save，size，clear）（异步）
+* v0.1.0更新，异步化三大常用函数（index，delete，retrieve），新增三大数据结构常用函数（save，size，clear）（异步），还定义了迭代器（输出已存储的文档与其哈希值的字典）
 
 #### 快速上手
 ```shell
@@ -95,6 +95,14 @@ async def main():
         print(f"删除完成: 移除了 {len(docs_to_delete)} 个文档，当前大小: {hipporag.size()} 文档")
     except Exception as e:
         print(f"删除失败: {e}")
+
+    # 输出文档(迭代器)
+    try: 
+        for text, hash_id in hipporag:
+            print(text)
+        print(f"文档输出完毕")
+    except Exception as e:
+        print(f"输出失败: {e}")
 
     # 清空系统
     try:
