@@ -18,7 +18,6 @@ __示例：__
 ```python
 import multiprocessing
 import asyncio
-import logging
 
 # 定义一个异步主函数来处理所有操作
 async def main():
@@ -82,7 +81,6 @@ async def main():
         retrieval_results = await hipporag.retrieve(queries=queries, num_to_retrieve=2)
         print(f"检索完成: 共处理 {len(retrieval_results)} 个查询")
     except Exception as e:
-        logging.exception(e)
         print(f"检索失败: {e}")
 
     # 删除文档
@@ -104,7 +102,6 @@ async def main():
         await hipporag.clear()  # 异步清空
         print(f"系统已清空，当前大小: {hipporag.size()} 文档")
     except Exception as e:
-        logging.exception(e)
         print(f"清空失败: {e}")
     
     # 验证状态
