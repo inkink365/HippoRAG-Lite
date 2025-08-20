@@ -220,6 +220,45 @@ class HippoRAG:
 
         assert False, logger.info('Done with OpenIE, run online indexing for future retrieval.')
 
+    def _ensure_openie_alignment(self,
+                                 chunk_keys: List[str] | Set[str],
+                                 ner_results_dict: Dict[str, NerRawOutput],
+                                 triple_results_dict: Dict[str, TripleRawOutput]) -> None:
+        """
+        确保 NER 与 Triple 字典对齐 chunk_keys：
+        - 缺失则用空结构回填
+        - 保留多余键（通常是历史缓存），但后续索引仅按 chunk_keys 访问
+        """
+        for chunk_id in chunk_keys:
+            if chunk_id not in ner_results_dict:
+                ner_results_dict[chunk_id] = NerRawOutput(
+                    chunk_id=chunk_id, response=None, metadata={}, unique_entities=[]
+                )
+            if chunk_id not in triple_results_dict:
+                triple_results_dict[chunk_id] = TripleRawOutput(
+                    chunk_id=chunk_id, response=None, metadata={}, triples=[]
+                )
+
+    def _safe_batch_openie(self,
+                           rows: Dict[str, dict]) -> Tuple[Dict[str, NerRawOutput], Dict[str, TripleRawOutput]]:
+        """
+        直接调用 openie.batch_openie，并在失败时回填空结构。
+        """
+        try:
+            ner_dict, triple_dict = self.openie.batch_openie(rows)
+            # 保证 key 全覆盖，缺失回填
+            self._ensure_openie_alignment(rows.keys(), ner_dict, triple_dict)
+            return ner_dict, triple_dict
+        except Exception as e:
+            # 失败时回填空结构
+            logger.error(f"batch_openie 失败，回填空结构：{e}")
+            ner_fallback = {}
+            triple_fallback = {}
+            for k in rows.keys():
+                ner_fallback[k] = NerRawOutput(chunk_id=k, response=None, metadata={}, unique_entities=[])
+                triple_fallback[k] = TripleRawOutput(chunk_id=k, response=None, metadata={}, triples=[])
+            return ner_fallback, triple_fallback
+
     async def index(self, docs: List[str]):
         """
         基于HippoRAG 2框架对给定文档进行索引，该框架会基于给定文档生成OpenIE知识图谱，
@@ -252,17 +291,18 @@ class HippoRAG:
         new_openie_rows = {k: chunk_to_rows[k] for k in chunk_keys_to_process}
 
         if len(chunk_keys_to_process) > 0:
-            # 处理OpenIE结果（计算密集型操作）
+            # 直接调用 OpenIE，失败时回填空结构
             new_ner_results_dict, new_triple_results_dict = await asyncio.to_thread(
-                self.openie.batch_openie, new_openie_rows
+                self._safe_batch_openie, new_openie_rows
             )
             await asyncio.to_thread(
-                self.merge_openie_results, 
-                all_openie_info, 
-                new_openie_rows, 
-                new_ner_results_dict, 
+                self.merge_openie_results,
+                all_openie_info,
+                new_openie_rows,
+                new_ner_results_dict,
                 new_triple_results_dict
             )
+
 
         if self.global_config.save_openie:
             await asyncio.to_thread(self.save_openie_results, all_openie_info)
@@ -1032,35 +1072,20 @@ class HippoRAG:
                              ner_results_dict: Dict[str, NerRawOutput],
                              triple_results_dict: Dict[str, TripleRawOutput]) -> List[dict]:
         """
-        Merges OpenIE extraction results with corresponding passage and metadata.
-
-        This function integrates the OpenIE extraction results, including named-entity
-        recognition (NER) entities and triples, with their respective text passages
-        using the provided chunk keys. The resulting merged data is appended to
-        the `all_openie_info` list containing dictionaries with combined and organized
-        data for further processing or storage.
-
-        Parameters:
-            all_openie_info (List[dict]): A list to hold dictionaries of merged OpenIE
-                results and metadata for all chunks.
-            chunks_to_save (Dict[str, dict]): A dict of chunk identifiers (keys) to process
-                and merge OpenIE results to dictionaries with `hash_id` and `content` keys.
-            ner_results_dict (Dict[str, NerRawOutput]): A dictionary mapping chunk keys
-                to their corresponding NER extraction results.
-            triple_results_dict (Dict[str, TripleRawOutput]): A dictionary mapping chunk
-                keys to their corresponding OpenIE triple extraction results.
-
-        Returns:
-            List[dict]: The `all_openie_info` list containing dictionaries with merged
-            OpenIE results, metadata, and the passage content for each chunk.
-
+        直接合并 OpenIE 结果和 chunk 内容，不再抛错。
         """
-
         for chunk_key, row in chunks_to_save.items():
             passage = row['content']
-            chunk_openie_info = {'idx': chunk_key, 'passage': passage,
-                                 'extracted_entities': ner_results_dict[chunk_key].unique_entities,
-                                 'extracted_triples': triple_results_dict[chunk_key].triples}
+
+            ner_obj = ner_results_dict.get(chunk_key, NerRawOutput(chunk_id=chunk_key, response=None, metadata={}, unique_entities=[]))
+            triple_obj = triple_results_dict.get(chunk_key, TripleRawOutput(chunk_id=chunk_key, response=None, metadata={}, triples=[]))
+
+            chunk_openie_info = {
+                'idx': chunk_key,
+                'passage': passage,
+                'extracted_entities': ner_obj.unique_entities,
+                'extracted_triples': triple_obj.triples
+            }
             all_openie_info.append(chunk_openie_info)
 
         return all_openie_info
